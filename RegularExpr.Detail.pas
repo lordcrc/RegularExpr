@@ -22,22 +22,26 @@ type
 
   IRegExpr = interface
     function Match(const Data: PByte; const DataLength: integer; const Flags: integer; out MatchOffset: integer; out MatchLength: integer): boolean;
+    procedure Study;
   end;
 
   TRegExprImpl = class(TInterfacedObject, IRegExpr)
   strict private
     FRe: PPCRE;
+    FReExtra: PPCREExtra;
     FOpts: integer;
     FOffsets: array[0..((MAX_SUBEXPRESSIONS + 1) * 3)] of Integer;
 //    FWorkspace: array[0..WORKSPACE_SIZE-1] of Integer;
   private
     property Re: PPCRE read FRe;
+    property ReExtra: PPCREExtra read FReExtra;
     property Opts: integer read FOpts;
   public
     constructor Create(const Pattern: string; const Options: integer);
     destructor Destroy; override;
 
     function Match(const Data: PByte; const DataLength: integer; const Flags: integer; out MatchOffset: integer; out MatchLength: integer): boolean;
+    procedure Study;
   end;
 
 implementation
@@ -151,6 +155,7 @@ begin
     raise EArgumentException.CreateFmt('Error in pattern: %s (offset %d)', [errorMsg, errorOffset]);
 
   FRe := r;
+  FReExtra := nil;
   FOpts := Options;
 end;
 
@@ -158,6 +163,8 @@ destructor TRegExprImpl.Destroy;
 begin
   if (Re <> nil) then
     pcre_dispose(Re, nil, nil);
+  if (ReExtra <> nil) then
+    pcre_free_study(ReExtra);
 
   inherited;
 end;
@@ -171,7 +178,7 @@ begin
 //  FillChar(FWorkspace, SizeOf(FWorkspace), 0);
 //  FillChar(FOffsets, SizeOf(FOffsets), 0);
   opts := Flags or PCRE_NOTEMPTY;
-  res := pcre_exec(Re, nil, MarshaledAString(Data), DataLength, 0, opts, @FOffsets, High(FOffsets));
+  res := pcre_exec(Re, ReExtra, MarshaledAString(Data), DataLength, 0, opts, @FOffsets, High(FOffsets));
   CheckPcreResult(res);
   result := res > 0;
   if result then
@@ -179,6 +186,16 @@ begin
     MatchOffset := FOffsets[0];
     MatchLength := FOffsets[1] - FOffsets[0];
   end;
+end;
+
+procedure TRegExprImpl.Study;
+var
+  errorMsg: MarshaledAString;
+begin
+  errorMsg := nil;
+  FReExtra := pcre_study(Re, 0, @errorMsg);
+  if (ReExtra = nil) and (errorMsg <> nil) then
+    raise EInvalidOpException.CreateFmt('Error studying pattern: %s', [errorMsg]);
 end;
 
 procedure InitTables;
