@@ -21,7 +21,7 @@ type
   end;
 
   IRegExpr = interface
-    function Match(const Data: TBytes; const Flags: integer; out MatchOffset: integer; out MatchLength: integer): boolean;
+    function Match(const Data: PByte; const DataLength: integer; const Flags: integer; out MatchOffset: integer; out MatchLength: integer): boolean;
   end;
 
   TRegExprImpl = class(TInterfacedObject, IRegExpr)
@@ -37,7 +37,7 @@ type
     constructor Create(const Pattern: string; const Options: integer);
     destructor Destroy; override;
 
-    function Match(const Data: TBytes; const Flags: integer; out MatchOffset: integer; out MatchLength: integer): boolean;
+    function Match(const Data: PByte; const DataLength: integer; const Flags: integer; out MatchOffset: integer; out MatchLength: integer): boolean;
   end;
 
 implementation
@@ -162,8 +162,8 @@ begin
   inherited;
 end;
 
-function TRegExprImpl.Match(const Data: TBytes; const Flags: integer;
-  out MatchOffset: integer; out MatchLength: integer): boolean;
+function TRegExprImpl.Match(const Data: PByte; const DataLength, Flags: integer; out MatchOffset,
+  MatchLength: integer): boolean;
 var
   opts: integer;
   res: integer;
@@ -171,7 +171,7 @@ begin
 //  FillChar(FWorkspace, SizeOf(FWorkspace), 0);
 //  FillChar(FOffsets, SizeOf(FOffsets), 0);
   opts := Flags or PCRE_NOTEMPTY;
-  res := pcre_exec(Re, nil, MarshaledAString(Data), Length(Data), 0, opts, @FOffsets, High(FOffsets));
+  res := pcre_exec(Re, nil, MarshaledAString(Data), DataLength, 0, opts, @FOffsets, High(FOffsets));
   CheckPcreResult(res);
   result := res > 0;
   if result then

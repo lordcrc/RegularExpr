@@ -47,7 +47,8 @@ type
 
     class operator Implicit(const Impl: RegularExpr.Detail.IRegExpr): RegEx;
 
-    function Match(const Data: TBytes; const MatchFlags: RegExMatchFlags = []): RegExMatch;
+    function Match(const Data: TBytes; const MatchFlags: RegExMatchFlags = []): RegExMatch; overload;
+    function Match(const Data: PByte; const DataLength: integer; const MatchFlags: RegExMatchFlags = []): RegExMatch; overload;
   end;
 
 
@@ -116,7 +117,7 @@ begin
   result.FImpl := Impl;
 end;
 
-function RegEx.Match(const Data: TBytes; const MatchFlags: RegExMatchFlags): RegExMatch;
+function RegEx.Match(const Data: PByte; const DataLength: integer; const MatchFlags: RegExMatchFlags): RegExMatch;
 var
   flags: integer;
   matched: boolean;
@@ -126,9 +127,14 @@ begin
   flags := RegExMatchFlagsToPCREFlags(MatchFlags);
   offset := -1;
   length := 0;
-  matched := Impl.Match(Data, flags, offset, length);
+  matched := Impl.Match(Data, DataLength, flags, offset, length);
 
   result := RegExMatch.Create(matched, offset, length);
+end;
+
+function RegEx.Match(const Data: TBytes; const MatchFlags: RegExMatchFlags): RegExMatch;
+begin
+  result := Match(@Data[0], Length(Data), MatchFlags);
 end;
 
 end.
