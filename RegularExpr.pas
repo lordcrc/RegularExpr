@@ -11,8 +11,7 @@ type
     RegExMultiLine,
     RegExSingleLine,
     RegExExtended,
-    RegExAnchored,
-    RegExStudy
+    RegExAnchored
   );
   RegExOptions = set of RegExOption;
 
@@ -111,9 +110,6 @@ begin
   opts := RegExOptionsToPCREOptions(Options);
 
   result := TRegExprImpl.Create(Pattern, opts);
-
-  if RegExStudy in Options then
-    result.Impl.Study;
 end;
 
 class operator RegEx.Implicit(const Impl: RegularExpr.Detail.IRegExpr): RegEx;

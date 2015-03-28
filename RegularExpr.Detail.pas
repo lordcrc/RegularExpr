@@ -22,7 +22,6 @@ type
 
   IRegExpr = interface
     function Match(const Data: PByte; const DataLength: integer; const Flags: integer; out MatchOffset: integer; out MatchLength: integer): boolean;
-    procedure Study;
   end;
 
   TRegExprImpl = class(TInterfacedObject, IRegExpr)
@@ -157,6 +156,9 @@ begin
   FRe := r;
   FReExtra := nil;
   FOpts := Options;
+
+  // jitting is not available, so just study always since it's fast
+  Study;
 end;
 
 destructor TRegExprImpl.Destroy;
