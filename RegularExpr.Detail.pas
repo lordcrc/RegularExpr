@@ -29,7 +29,7 @@ type
     FRe: PPCRE;
     FOpts: integer;
     FOffsets: array[0..((MAX_SUBEXPRESSIONS + 1) * 3)] of Integer;
-    FWorkspace: array[0..WORKSPACE_SIZE-1] of Integer;
+//    FWorkspace: array[0..WORKSPACE_SIZE-1] of Integer;
   private
     property Re: PPCRE read FRe;
     property Opts: integer read FOpts;
@@ -97,7 +97,7 @@ begin
   raise Exception.Create(s);
 end;
 
-function StrToASCII(const Str: string): TBytes;
+function StrToASCIIZ(const Str: string): TBytes;
 var
   flags: cardinal;
   byteCount: integer;
@@ -119,11 +119,11 @@ begin
   if (Length(Str) > 0) and (byteCount = 0) then
     raise EConvertError.Create('String is not valid ASCII');
 
-  SetLength(result, byteCount);
+  SetLength(result, byteCount + 1);
 
-  byteCount := LocaleCharsFromUnicode(TEncoding.ASCII.CodePage, flags, @Str[1], Length(Str), PAnsiChar(@result[0]), Length(result), nil, @conversionError);
+  byteCount := LocaleCharsFromUnicode(TEncoding.ASCII.CodePage, flags, @Str[1], Length(Str), PAnsiChar(@result[0]), Length(result) - 1, nil, @conversionError);
 
-  if (byteCount <> Length(result)) then
+  if (byteCount <> (Length(result) - 1)) then
     raise EConvertError.Create('String is not valid ASCII');
 
   if (conversionError) then
@@ -135,12 +135,17 @@ end;
 constructor TRegExprImpl.Create(const Pattern: string; const Options: integer);
 var
   r: PPCRE;
+  p: TBytes;
   errorMsg: MarshaledAString;
   errorOffset: integer;
 begin
   inherited Create;
 
-  r := pcre_compile(MarshaledAString(StrToASCII(Pattern)), Options, @errorMsg, @errorOffset, PCRECharTable);
+  errorMsg := nil;
+  errorOffset := -1;
+
+  p := StrToASCIIZ(Pattern);
+  r := pcre_compile(MarshaledAString(p), Options, @errorMsg, @errorOffset, nil); //PCRECharTable);
 
   if (r = nil) then
     raise EArgumentException.CreateFmt('Error in pattern: %s (offset %d)', [errorMsg, errorOffset]);
@@ -163,7 +168,8 @@ var
   opts: integer;
   res: integer;
 begin
-  FillChar(FWorkspace, SizeOf(FWorkspace), 0);
+//  FillChar(FWorkspace, SizeOf(FWorkspace), 0);
+//  FillChar(FOffsets, SizeOf(FOffsets), 0);
   opts := Flags or PCRE_NOTEMPTY;
   res := pcre_exec(Re, nil, MarshaledAString(Data), Length(Data), 0, opts, @FOffsets, High(FOffsets));
   CheckPcreResult(res);
