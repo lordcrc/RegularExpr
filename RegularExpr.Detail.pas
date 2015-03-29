@@ -148,7 +148,7 @@ begin
   errorOffset := -1;
 
   p := StrToASCIIZ(Pattern);
-  r := pcre_compile(MarshaledAString(p), Options, @errorMsg, @errorOffset, nil); //PCRECharTable);
+  r := pcre_compile(MarshaledAString(p), Options, @errorMsg, @errorOffset, PCRECharTable);
 
   if (r = nil) then
     raise EArgumentException.CreateFmt('Error in pattern: %s (offset %d)', [errorMsg, errorOffset]);
@@ -163,10 +163,11 @@ end;
 
 destructor TRegExprImpl.Destroy;
 begin
-  if (Re <> nil) then
-    pcre_dispose(Re, nil, nil);
   if (ReExtra <> nil) then
     pcre_free_study(ReExtra);
+
+  if (Re <> nil) then
+    pcre_dispose(Re, nil, nil);
 
   inherited;
 end;
@@ -177,17 +178,17 @@ var
   opts: integer;
   res: integer;
 begin
-//  FillChar(FWorkspace, SizeOf(FWorkspace), 0);
-//  FillChar(FOffsets, SizeOf(FOffsets), 0);
   opts := Flags or PCRE_NOTEMPTY;
+
   res := pcre_exec(Re, ReExtra, MarshaledAString(Data), DataLength, 0, opts, @FOffsets, High(FOffsets));
+
   CheckPcreResult(res);
   result := res > 0;
-  if result then
-  begin
-    MatchOffset := FOffsets[0];
-    MatchLength := FOffsets[1] - FOffsets[0];
-  end;
+  if not result then
+    exit;
+
+  MatchOffset := FOffsets[0];
+  MatchLength := FOffsets[1] - FOffsets[0];
 end;
 
 procedure TRegExprImpl.Study;
@@ -195,7 +196,9 @@ var
   errorMsg: MarshaledAString;
 begin
   errorMsg := nil;
+
   FReExtra := pcre_study(Re, 0, @errorMsg);
+
   if (ReExtra = nil) and (errorMsg <> nil) then
     raise EInvalidOpException.CreateFmt('Error studying pattern: %s', [errorMsg]);
 end;
